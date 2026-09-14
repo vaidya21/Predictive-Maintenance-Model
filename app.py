@@ -12,28 +12,33 @@ st.write("This app uses a Random Forest Machine Learning model to predict machin
 
 @st.cache_resource
 def load_and_train_model():
-    # For a quick deployment app, we train the model on-the-fly using sample data logic or a loaded dataset.
-    # Make sure your 'ai4i2020.csv' is in your repo!
     try:
         df = pd.read_csv('ai4i2020.csv')
     except FileNotFoundError:
         st.error("Dataset 'ai4i2020.csv' not found in the repository. Please upload it to GitHub.")
         return None, None, None
 
-    if 'UDI' in df.columns:
-        df = df.drop(columns=['UDI', 'Product ID'])
+    # Drop identifiers and target columns, including the specific failure mode flags if present
+    cols_to_drop = ['UDI', 'Product ID', 'Machine failure', 'TWF', 'HDF', 'PWF', 'OSF', 'RNF']
+    features_to_drop = [col for col in cols_to_drop if col in df.columns]
     
-    le = LabelEncoder()
-    df['Type'] = le.fit_transform(df['Type'])
-    
-    X = df.drop(columns=['Machine failure'])
+    X = df.drop(columns=features_to_drop)
     y = df['Machine failure']
+    
+    # Encode categorical column 'Type'
+    if 'Type' in X.columns:
+        le = LabelEncoder()
+        X['Type'] = le.fit_transform(X['Type'])
+    else:
+        le = None
     
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
     model = RandomForestClassifier(n_estimators=100, random_state=42)
     model.fit(X_scaled, y)
+    
+    return model, scaler, le
     
     return model, scaler, le
 
